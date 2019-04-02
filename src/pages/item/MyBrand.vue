@@ -3,9 +3,10 @@
     <v-card>
       <!--卡片头部-->
       <v-card-title>
-        <v-btn color="primary">新增品牌</v-btn>
+        <v-btn color="primary" @click="addBrand">新增品牌</v-btn>
         <!--空间隔离组件-->
         <v-spacer/>
+
         <!--搜索框，与search属性关联-->
         <v-text-field label="输入关键字搜索" v-model="search" append-icon="search" hide-details/>
       </v-card-title>
@@ -36,13 +37,33 @@
       </v-data-table>
 
     </v-card>
+    <v-dialog max-width="500" v-model="show" persistent>
+      <v-card>
+        <!--对话框的标题-->
+        <v-toolbar dense dark color="primary">
+          <v-toolbar-title>新增品牌</v-toolbar-title>
+          <v-spacer/>
+          <v-btn icon @click="closeWindow"><v-icon>close</v-icon></v-btn>
+        </v-toolbar>
+        <!--对话框的内容，表单-->
+        <v-card-text class="px-5">
+          <my-form @close-window="closeWindow"></my-form>
+        </v-card-text>
+      </v-card>
+    </v-dialog>
   </div>
 
 </template>
 
 <script>
+  // 导入自定义组件
+  import MyBrandForm from './MyBrandForm'
   export default {
     name: "my-brand",
+    components: {
+      "my-form":MyBrandForm
+    },
+
     data() {
       return {
         search: '', // 搜索过滤字段
@@ -58,7 +79,8 @@
           {text: 'LOGO', align: 'center', sortable: false, value: 'image'},
           {text: '首字母', align: 'center', value: 'letter', sortable: true,},
           {text: '操作', align: 'center', value: 'id', sortable: false,}
-        ]
+        ],
+        show:false
       }
     },
     methods: {
@@ -78,19 +100,30 @@
           this.loading = false;
         })
 
+      },
+
+      addBrand(){
+        this.show = true
+      },
+      closeWindow(){
+        // 关闭窗口
+        this.show = false;
+        // 重新加载数据
+        this.getDataFromServer();
       }
+
 
     },
 
     watch:{
-      pagination:{
-        deep:true,
+      pagination:{ // 监视pagination属性的变化
+        deep:true, // deep为true，会监视pagination的属性及属性中的对象属性变化
         handler(){
           this.getDataFromServer();
         }
       },
 
-      search:{
+      search:{ // 监视搜索字段
         handler(){
           this.getDataFromServer();
         }
