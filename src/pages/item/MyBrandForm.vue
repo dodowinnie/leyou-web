@@ -17,14 +17,14 @@
           url="/up/upload/image"
           :multiple="false"
           :pic-width="250"
-          :pic-height="90"
+          :pic-height="90" ref="myUpload"
         />
       </v-flex>
     </v-layout>
     <v-layout class="my-4" row>
       <v-spacer/>
       <v-btn @click="submit" color="primary">提交</v-btn>
-      <v-btn @click="clear" >重置</v-btn>
+      <v-btn @click="clear">重置</v-btn>
     </v-layout>
   </v-form>
 </template>
@@ -42,41 +42,80 @@
           categories: [], // 品牌所属的商品分类数组
         },
 
-        nameRules:[
+        nameRules: [
           v => !!v || "品牌名称不能为空",
           v => v.length > 1 || "品牌名称至少2位"
         ],
-        letterRules:[
+        letterRules: [
           v => !!v || "首字母不能为空",
           v => /^[A-Z]{1}$/.test(v) || "品牌字母只能是A~Z的大写字母"
         ]
       }
     },
 
-    methods:{
-      submit(){
+    props: {
+      // 接受父组件传的值
+      fromParentBrand: {
+        type: Object
+      },
+      formIsEdit: {
+        type: Boolean,
+        default: false
+      }
+    },
+
+    methods: {
+      submit() {
         // 表单校验
-        if(this.$refs.myBrandForm.validate()){
+        if (this.$refs.myBrandForm.validate()) {
           // 定义一个请求参数对象，通过解构表达式来获取brand中的属性
-          const{categories, letter, ...params} = this.brand;
+          const {categories, letter, ...params} = this.brand;
           //数据库中只要保存分类的id即可，因此我们对categories的值进行处理,只保留id，并转为字符串
           params.cids = categories.map(c => c.id).join(",")
           // 将字母都处理为大写
           params.letter = letter.toUpperCase()
           // 提交
-          this.$http.post("/item/brand/save", this.$qs.stringify(params)).then(()=>{
+          this.$http({
+            method: this.formIsEdit ? "put" : "post",
+            url: "/item/brand/opt",
+            data: this.$qs.stringify(params)
+          }).then(() => {
             this.$message.success("保存成功");
             this.$emit("close-window");
-          }).catch(()=>{
+          }).catch(() => {
             this.$message.error("保存失败");
+          }).finally(() => {
+            this.$emit("get-data-from-server")
           })
         }
       },
-      clear(){
+      clear() {
         this.$refs.myBrandForm.reset();
-        this.categories=[];
+        this.categories = [];
       }
     },
+
+    watch: {
+      fromParentBrand: {
+        handler(val) {
+          // 删除图片
+          this.$refs.myUpload.removeSingle()
+          if (val) {
+            this.brand = Object.deepCopy(val)
+          } else {
+            // 为空初始化brand
+            console.log("修改品牌清空，初始化brand")
+            this.brand = {
+              name: '', // 品牌名称
+              letter: '', // 品牌首字母
+              image: '',// 品牌logo
+              categories: [], // 品牌所属的商品分类数组
+            }
+          }
+        }, deep: true
+      }
+    }
+
 
   }
 </script>

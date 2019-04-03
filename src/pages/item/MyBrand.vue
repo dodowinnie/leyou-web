@@ -30,8 +30,8 @@
             <span v-else>无</span></td>
           <td class="text-xs-center">{{ props.item.letter }}</td>
           <td class="justify-center layout">
-            <v-btn color="info">编辑</v-btn>
-            <v-btn color="warning">删除</v-btn>
+            <v-btn color="info" @click="editBrand(props.item)">编辑</v-btn>
+            <v-btn color="warning" @click="deleteBrand(props.item.id)">删除</v-btn>
           </td>
         </template>
       </v-data-table>
@@ -41,13 +41,15 @@
       <v-card>
         <!--对话框的标题-->
         <v-toolbar dense dark color="primary">
-          <v-toolbar-title>新增品牌</v-toolbar-title>
+          <v-toolbar-title>{{isEdit ? "修改":"新增"}}品牌</v-toolbar-title>
           <v-spacer/>
-          <v-btn icon @click="closeWindow"><v-icon>close</v-icon></v-btn>
+          <v-btn icon @click="closeWindow">
+            <v-icon>close</v-icon>
+          </v-btn>
         </v-toolbar>
         <!--对话框的内容，表单-->
         <v-card-text class="px-5">
-          <my-form @close-window="closeWindow"></my-form>
+          <my-form @close-window="closeWindow" v-bind:from-parent-brand="oldBrand" :form-is-edit="isEdit"></my-form>
         </v-card-text>
       </v-card>
     </v-dialog>
@@ -58,10 +60,11 @@
 <script>
   // 导入自定义组件
   import MyBrandForm from './MyBrandForm'
+
   export default {
     name: "my-brand",
     components: {
-      "my-form":MyBrandForm
+      "my-form": MyBrandForm
     },
 
     data() {
@@ -70,9 +73,7 @@
         totalBrands: 0, // 总条数
         brands: [], // 当前页品牌数据
         loading: true, // 是否在加载中
-        pagination: {
-
-        }, // 分页信息
+        pagination: {}, // 分页信息
         headers: [ // 头信息
           {text: 'id', align: 'center', value: 'id'},
           {text: '名称', align: 'center', sortable: false, value: 'name'},
@@ -80,20 +81,25 @@
           {text: '首字母', align: 'center', value: 'letter', sortable: true,},
           {text: '操作', align: 'center', value: 'id', sortable: false,}
         ],
-        show:false
+        show: false,
+        oldBrand: { // 即将被编辑的数据
+
+        },
+        isEdit: false // 是否编辑
+
       }
     },
     methods: {
       getDataFromServer() { // 从服务的加载数据的方法
-        this.$http.get("/item/brand/page",{
-          params:{
+        this.$http.get("/item/brand/page", {
+          params: {
             key: this.search,
             page: this.pagination.page,
             rows: this.pagination.rowsPerPage,
             sortBy: this.pagination.sortBy,
             desc: this.pagination.descending
           }
-        }).then(resp =>{
+        }).then(resp => {
           this.brands = resp.data.items;
           this.totalBrands = resp.data.total;
           // 完成赋值后，把加载状态赋值为false
@@ -102,29 +108,58 @@
 
       },
 
-      addBrand(){
-        this.show = true
+      editBrand(oldBrand) {
+        // 根据品牌信息查询商品分类
+        this.$http.get("/item/category/bid/" + oldBrand.id).then(resp => {
+          this.isEdit = true
+          this.show = true
+          this.oldBrand = oldBrand
+          this.oldBrand.categories = resp.data
+        })
+
+
       },
-      closeWindow(){
+
+      addBrand() {
+        this.isEdit = false
+        this.show = true
+        this.oldBrand = null
+      },
+
+      closeWindow() {
         // 关闭窗口
         this.show = false;
         // 重新加载数据
         this.getDataFromServer();
+      },
+
+      deleteBrand(id) {
+        const param = {id: id}
+        this.$message.confirm("确认删除？？").then(() => {
+          this.$http.put("/item/brand/delete", this.$qs.stringify(param)).then(() => {
+            this.$message.success("删除成功")
+            this.getDataFromServer()
+          }).catch(() => {
+            this.$message.error("删除失败")
+          })
+        })
+
+
       }
 
 
     },
 
-    watch:{
-      pagination:{ // 监视pagination属性的变化
-        deep:true, // deep为true，会监视pagination的属性及属性中的对象属性变化
-        handler(){
+    watch: {
+      pagination: { // 监视pagination属性的变化
+        deep: true, // deep为true，会监视pagination的属性及属性中的对象属性变化
+        handler() {
           this.getDataFromServer();
         }
       },
 
-      search:{ // 监视搜索字段
-        handler(){
+      search: { // 监视搜索字段
+        handler() {
           this.getDataFromServer();
         }
       }
