@@ -29,7 +29,7 @@
       </template>
     </v-data-table>
     <!--弹出的对话框-->
-    <v-dialog max-width="500" v-model="show" persistent>
+    <v-dialog max-width="1000" v-model="show" persistent>
       <v-card>
         <!--对话框的标题-->
         <v-toolbar dense dark color="primary">
@@ -41,9 +41,16 @@
           </v-btn>
         </v-toolbar>
         <!--对话框的内容，表单-->
-        <v-card-text class="px-5">
+        <v-card-text class="px-3" style="height: 600px">
           <my-goods-form :oldGoods="oldGoods"/>
         </v-card-text>
+        <!--底部按钮，用来操作步骤线-->
+        <v-card-actions class="elevation-10">
+          <v-flex class="xs3 mx-auto">
+            <v-btn @click="previous" color="primary">上一步</v-btn>
+            <v-btn @click="next" color="primary">下一步</v-btn>
+          </v-flex>
+        </v-card-actions>
       </v-card>
     </v-dialog>
   </v-card>
@@ -74,7 +81,32 @@
 
       }
     },
-    methods: {},
+    methods: {
+      addGoods(){
+        this.show = true
+        this.isEdit = false
+        this.oldBrand = null
+      },
+
+      getFormData(){
+        this.$http.get("/item/goods/list",{
+          params: {
+            key: this.search,
+            page: this.pagination.page,
+            rows: this.pagination.rowsPerPage,
+            sortBy: this.pagination.sortBy,
+            desc: this.pagination.descending
+          }
+        }).then(resp => {
+          console.log(resp)
+        })
+      },
+
+      closeWindow(){
+        this.show = false
+      }
+
+    },
     components:{
       MyGoodsForm
     }
